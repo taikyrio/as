@@ -18,10 +18,13 @@ import {
   Users,
   Home,
   Briefcase,
-  GraduationCap
+  GraduationCap,
+  Zap,
 } from 'lucide-react';
-import { Character } from '../types/GameTypes';
+import { Character, LifeEvent } from '../types/GameTypes';
 import { TimelineInterface } from './TimelineInterface';
+import { ActivitiesInterface } from './ActivitiesInterface';
+import { MiniGames } from './MiniGames';
 import { DecisionModal } from './DecisionModal';
 
 interface MobileGameInterfaceProps {
@@ -31,6 +34,9 @@ interface MobileGameInterfaceProps {
   onSaveGame: () => void;
   onShowSettings: () => void;
   onShowStats: () => void;
+  onViewCareer: () => void;
+  onViewCrime: () => void;
+  onViewLifeActions: () => void;
 }
 
 export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
@@ -39,9 +45,12 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
   onAgeUp,
   onSaveGame,
   onShowSettings,
-  onShowStats
+  onShowStats,
+  onViewCareer,
+  onViewCrime,
+  onViewLifeActions
 }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'timeline' | 'actions'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'timeline' | 'actions' | 'activities' | 'minigames'>('overview');
   const [showMenu, setShowMenu] = useState(false);
   const [currentDecision, setCurrentDecision] = useState<any>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
@@ -127,7 +136,7 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={onSaveGame}
@@ -249,8 +258,8 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
               </h3>
               <div className="space-y-3">
                 {recentEvents.length > 0 ? (
-                  recentEvents.map((event) => (
-                    <div key={event.id} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                  recentEvents.map((event, index) => (
+                    <div key={`${event.id}-${Date.now()}-${index}`} className="bg-white/5 rounded-lg p-3 border border-white/10">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="font-semibold text-white text-sm">{event.title}</h4>
@@ -283,48 +292,58 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
         {activeView === 'actions' && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-white mb-6">Life Actions</h2>
-            
+
             <ActionButton
               icon={<GraduationCap className="w-6 h-6" />}
               text="Education & Learning"
               onClick={() => {}}
               color="from-blue-500 to-cyan-500"
             />
-            
+
             <ActionButton
               icon={<Briefcase className="w-6 h-6" />}
               text="Career & Work"
-              onClick={() => {}}
+              onClick={onViewCareer}
               color="from-green-500 to-emerald-500"
             />
-            
+
             <ActionButton
               icon={<Users className="w-6 h-6" />}
               text="Relationships"
               onClick={() => {}}
               color="from-pink-500 to-rose-500"
             />
-            
+
             <ActionButton
               icon={<Home className="w-6 h-6" />}
               text="Real Estate"
               onClick={() => {}}
               color="from-orange-500 to-amber-500"
             />
-            
+
             <ActionButton
               icon={<Heart className="w-6 h-6" />}
               text="Health & Fitness"
               onClick={() => {}}
               color="from-red-500 to-pink-500"
             />
-            
+
             <ActionButton
               icon={<Star className="w-6 h-6" />}
-              text="Hobbies & Entertainment"
-              onClick={() => {}}
+              text="All Life Actions"
+              onClick={onViewLifeActions}
               color="from-purple-500 to-indigo-500"
             />
+
+            {character.age >= 12 && (
+              <ActionButton
+                icon={<div className="w-6 h-6 flex items-center justify-center text-red-400 font-bold">⚡</div>}
+                text="Criminal Activities"
+                onClick={onViewCrime}
+                color="from-red-500 to-red-600"
+                danger={true}
+              />
+            )}
           </div>
         )}
       </div>
@@ -355,5 +374,42 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
         </div>
       )}
     </div>
+  );
+};
+
+// ActionButton Component
+interface ActionButtonProps {
+  icon: React.ReactNode;
+  text: string;
+  onClick: () => void;
+  color: string;
+  danger?: boolean;
+}
+
+const ActionButton: React.FC<ActionButtonProps> = ({ 
+  icon, 
+  text, 
+  onClick, 
+  color, 
+  danger = false 
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full p-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-4 shadow-lg ${
+        danger 
+          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-400/30' 
+          : `bg-gradient-to-r ${color} text-white`
+      }`}
+    >
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+        danger ? 'bg-red-400/20' : 'bg-white/20'
+      }`}>
+        {icon}
+      </div>
+      <div className="flex-1 text-left">
+        <div className="font-bold">{text}</div>
+      </div>
+    </button>
   );
 };

@@ -71,7 +71,7 @@ export const TimelineInterface: React.FC<TimelineInterfaceProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <button
               onClick={onAgeUp}
               className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 flex items-center gap-2 shadow-lg"
@@ -157,9 +157,9 @@ export const TimelineInterface: React.FC<TimelineInterfaceProps> = ({
                   Events at Age {selectedYear}
                 </h3>
                 {yearEvents.length > 0 ? (
-                  yearEvents.map((event) => (
+                  yearEvents.map((event, index) => (
                     <div
-                      key={event.id}
+                      key={`timeline-${event.id}-${event.year}-${index}-${Date.now()}`}
                       onClick={() => onViewEvent(event)}
                       className="bg-white/5 rounded-lg p-4 border border-white/10 hover:bg-white/10 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
                     >
@@ -359,7 +359,7 @@ export const TimelineInterface: React.FC<TimelineInterfaceProps> = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;
@@ -369,7 +369,7 @@ export const TimelineInterface: React.FC<TimelineInterfaceProps> = ({
           cursor: pointer;
           box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
-        
+
         .slider::-moz-range-thumb {
           height: 20px;
           width: 20px;

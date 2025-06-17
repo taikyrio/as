@@ -103,7 +103,7 @@ export class CrimeSystem {
       this.getPrisonSecurityLevel(character) <= this.getSecurityLevelNum(p.securityLevel)
     );
     
-    const prison = availablePrisons[Math.floor(Math.random() * availablePrisons.length)];
+    const prison = availablePrisons[Math.floor(Math.random() * availablePrisons.length)] || prisons[0];
     
     const imprisonment: Imprisonment = {
       id: Date.now().toString(),
@@ -117,9 +117,45 @@ export class CrimeSystem {
     character.criminalRecord.imprisonments.push(imprisonment);
     character.criminalRecord.totalSentence += sentenceMonths;
     
-    // Prison impacts
-    character.stats.happiness = Math.max(0, character.stats.happiness - 30);
-    character.stats.health = Math.max(0, character.stats.health - 15);
+    // Prison impacts based on security level
+    const securityImpact = this.getSecurityLevelNum(prison.securityLevel);
+    character.stats.happiness = Math.max(0, character.stats.happiness - (20 + securityImpact * 5));
+    character.stats.health = Math.max(0, character.stats.health - (10 + securityImpact * 3));
+    
+    // Remove current job if employed
+    if (character.career) {
+      character.career = undefined;
+    }
+  }
+
+  // Check if character is currently in prison
+  isInPrison(character: Character, currentYear: number): boolean {
+    return character.criminalRecord.imprisonments.some(imp => 
+      currentYear >= imp.startYear && currentYear < imp.endYear
+    );
+  }
+
+  // Process prison time effects during age up
+  processPrisonTime(character: Character, currentYear: number): void {
+    const currentImprisonment = character.criminalRecord.imprisonments.find(imp => 
+      currentYear >= imp.startYear && currentYear < imp.endYear
+    );
+
+    if (currentImprisonment) {
+      // Prison negatively affects stats over time
+      if (Math.random() < 0.3) {
+        character.stats.happiness = Math.max(0, character.stats.happiness - Math.floor(Math.random() * 3) + 1);
+      }
+      if (Math.random() < 0.2) {
+        character.stats.health = Math.max(0, character.stats.health - Math.floor(Math.random() * 2) + 1);
+      }
+      
+      // Chance for behavioral changes
+      if (Math.random() < 0.1) {
+        currentImprisonment.behavior += Math.floor(Math.random() * 21) - 10; // -10 to +10
+        currentImprisonment.behavior = Math.max(0, Math.min(100, currentImprisonment.behavior));
+      }
+    }
   }
 
   private getPrisonSecurityLevel(character: Character): number {

@@ -4,15 +4,28 @@ import { MainMenu } from './components/MainMenu';
 import { CharacterCreation } from './components/CharacterCreation';
 import { MobileGameInterface } from './components/MobileGameInterface';
 import { CrimeInterface } from './components/CrimeInterface';
+import { CareerInterface } from './components/CareerInterface';
+import { LifeActionsInterface } from './components/LifeActionsInterface';
+import { Settings } from './components/Settings';
+import { Statistics } from './components/Statistics';
+import { DecisionModal } from './components/DecisionModal';
+import { DeathScene } from './components/DeathScene';
 import { GameState } from './types/GameTypes';
+import { localDB, SaveData } from './engine/LocalDatabase';
 
-type GameScreen = 'menu' | 'character-creation' | 'game' | 'crime';
+// Create a single instance of GameEngine
+const gameEngine = new GameEngine();
+
+type GameScreen = 'menu' | 'character-creation' | 'game' | 'crime' | 'career' | 'life-actions';
 
 function App() {
-  const [gameEngine] = useState(() => new GameEngine());
   const [gameState, setGameState] = useState<GameState>(gameEngine.getGameState());
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('menu');
   const [hasExistingSave, setHasExistingSave] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [isDead, setIsDead] = useState(false);
+  const [causeOfDeath, setCauseOfDeath] = useState<string>('natural causes');
 
   useEffect(() => {
     // Check for existing save on startup
@@ -39,22 +52,45 @@ function App() {
     setCurrentScreen('character-creation');
   };
 
-  const handleLoadGame = () => {
-    if (gameEngine.loadGame()) {
+  const handleLoadGame = (saveData?: SaveData) => {
+    if (saveData) {
+      // Load from specific save data
+      const loadedState = gameEngine.loadGameFromSave(saveData);
+      setGameState(loadedState);
+      setCurrentScreen('game');
+    } else if (gameEngine.loadGame()) {
+      // Load from localStorage
       setGameState(gameEngine.getGameState());
       setCurrentScreen('game');
     }
   };
 
   const handleCreateCharacter = (name: string, country: string) => {
-    gameEngine.startNewLife(name, country);
-    setGameState(gameEngine.getGameState());
-    setCurrentScreen('game');
+    try {
+      gameEngine.startNewLife(name, country);
+      setGameState(gameEngine.getGameState());
+      setCurrentScreen('game');
+    } catch (error) {
+      console.error('Error starting game:', error);
+      // Reset game engine if there's an error
+      gameEngine.resetGame();
+      setGameState(gameEngine.getGameState());
+    }
   };
 
   const handleAgeUp = () => {
-    gameEngine.ageUp();
+    const result = gameEngine.ageUp();
     setGameState(gameEngine.getGameState());
+
+    if (result.isDead) {
+      setIsDead(true);
+      setCauseOfDeath(result.causeOfDeath || 'natural causes');
+      return;
+    }
+
+    if (result.decisions.length > 0) {
+      setCurrentScreen('game');
+    }
   };
 
   const handleBackToMenu = () => {
@@ -63,6 +99,14 @@ function App() {
 
   const handleViewCrime = () => {
     setCurrentScreen('crime');
+  };
+
+  const handleViewCareer = () => {
+    setCurrentScreen('career');
+  };
+
+  const handleViewLifeActions = () => {
+    setCurrentScreen('life-actions');
   };
 
   const handleBackToGame = () => {
@@ -75,28 +119,75 @@ function App() {
     return result;
   };
 
+  const handleApplyForJob = (careerId: string) => {
+    const result = gameEngine.applyForJob(careerId);
+    setGameState(gameEngine.getGameState());
+    return result;
+  };
+
+  const handleSuicide = () => {
+    const result = gameEngine.commitSuicide();
+    setIsDead(true);
+    setCauseOfDeath('suicide');
+    setGameState(gameEngine.getGameState());
+  };
+
   const handleSaveGame = () => {
     gameEngine.saveGame();
     // Could show a toast notification here
   };
 
   const handleShowSettings = () => {
-    // Implement settings modal
+    setShowSettings(true);
   };
 
   const handleShowStats = () => {
-    // Implement statistics modal
+    setShowStats(true);
+  };
+
+  const handleQuickStart = () => {
+    const randomName = 'Random Name'; // Implement your name generation logic here
+    const randomCountry = 'Random Country'; // Implement your country selection logic here
+    gameEngine.startNewLife(randomName, randomCountry);
+    setGameState(gameEngine.getGameState());
+    setCurrentScreen('game');
+  };
+
+  const handleNewGameAfterDeath = () => {
+    setIsDead(false);
+    setCauseOfDeath('natural causes');
+    setGameState(gameEngine.getGameState());
+    setCurrentScreen('character-creation');
+  };
+
+  const handleMainMenuAfterDeath = () => {
+    setIsDead(false);
+    setCauseOfDeath('natural causes');
+    setGameState(gameEngine.getGameState());
+    setCurrentScreen('menu');
   };
 
   const renderCurrentScreen = () => {
+    if (isDead && gameState.character) {
+      return (
+        <DeathScene
+          character={gameState.character}
+          causeOfDeath={causeOfDeath}
+          onNewGame={handleNewGameAfterDeath}
+          onMainMenu={handleMainMenuAfterDeath}
+        />
+      );
+    }
+
     switch (currentScreen) {
       case 'menu':
         return (
           <MainMenu
             onNewGame={handleNewGame}
+            onQuickStart={handleQuickStart}
             onLoadGame={handleLoadGame}
-            onSettings={handleShowSettings}
-            onStats={handleShowStats}
+            onShowSettings={handleShowSettings}
+            onShowStats={handleShowStats}
             hasExistingSave={hasExistingSave}
           />
         );
@@ -104,7 +195,7 @@ function App() {
       case 'character-creation':
         return (
           <CharacterCreation
-            countries={gameState.countries}
+            countries={gameState.countries || []}
             onCreateCharacter={handleCreateCharacter}
             onBack={handleBackToMenu}
           />
@@ -119,6 +210,9 @@ function App() {
             onSaveGame={handleSaveGame}
             onShowSettings={handleShowSettings}
             onShowStats={handleShowStats}
+            onViewCareer={handleViewCareer}
+            onViewCrime={handleViewCrime}
+            onViewLifeActions={handleViewLifeActions}
           />
         );
 
@@ -131,6 +225,27 @@ function App() {
           />
         );
 
+      case 'career':
+        return (
+          <CareerInterface
+            character={gameState.character}
+            careers={gameState.careers}
+            onApplyForJob={handleApplyForJob}
+            onBack={handleBackToGame}
+          />
+        );
+
+      case 'life-actions':
+        return (
+          <LifeActionsInterface
+            character={gameState.character}
+            onViewCareer={handleViewCareer}
+            onViewCrime={handleViewCrime}
+            onSuicide={handleSuicide}
+            onBack={handleBackToGame}
+          />
+        );
+
       default:
         return null;
     }
@@ -139,6 +254,19 @@ function App() {
   return (
     <div className="App min-h-screen">
       {renderCurrentScreen()}
+
+      {showSettings && (
+        <Settings
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {showStats && (
+        <Statistics
+          character={gameState.character}
+          onClose={() => setShowStats(false)}
+        />
+      )}
     </div>
   );
 }
