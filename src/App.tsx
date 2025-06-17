@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GameEngine } from './engine/GameEngine';
 import { MainMenu } from './components/MainMenu';
 import { CharacterCreation } from './components/CharacterCreation';
-import { GameInterface } from './components/GameInterface';
+import { MobileGameInterface } from './components/MobileGameInterface';
 import { CrimeInterface } from './components/CrimeInterface';
 import { GameState } from './types/GameTypes';
 
@@ -24,7 +24,16 @@ function App() {
         setCurrentScreen('game');
       }
     }
-  }, [gameEngine]);
+
+    // Auto-save every 30 seconds
+    const autoSaveInterval = setInterval(() => {
+      if (gameState.gameStarted) {
+        gameEngine.saveGame();
+      }
+    }, 30000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [gameEngine, gameState.gameStarted]);
 
   const handleNewGame = () => {
     setCurrentScreen('character-creation');
@@ -66,6 +75,19 @@ function App() {
     return result;
   };
 
+  const handleSaveGame = () => {
+    gameEngine.saveGame();
+    // Could show a toast notification here
+  };
+
+  const handleShowSettings = () => {
+    // Implement settings modal
+  };
+
+  const handleShowStats = () => {
+    // Implement statistics modal
+  };
+
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case 'menu':
@@ -73,8 +95,8 @@ function App() {
           <MainMenu
             onNewGame={handleNewGame}
             onLoadGame={handleLoadGame}
-            onSettings={() => {}}
-            onStats={() => {}}
+            onSettings={handleShowSettings}
+            onStats={handleShowStats}
             hasExistingSave={hasExistingSave}
           />
         );
@@ -90,13 +112,13 @@ function App() {
 
       case 'game':
         return (
-          <GameInterface
+          <MobileGameInterface
             character={gameState.character}
             currentYear={gameState.currentYear}
             onAgeUp={handleAgeUp}
-            onViewProfile={() => {}}
-            onViewCrime={handleViewCrime}
-            onViewCareer={() => {}}
+            onSaveGame={handleSaveGame}
+            onShowSettings={handleShowSettings}
+            onShowStats={handleShowStats}
           />
         );
 
@@ -115,7 +137,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className="App min-h-screen">
       {renderCurrentScreen()}
     </div>
   );
