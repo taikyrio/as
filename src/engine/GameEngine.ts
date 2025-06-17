@@ -132,28 +132,45 @@ export class GameEngine {
     this.gameState.character.age++;
     this.gameState.currentYear++;
 
+    // Check if character is in prison and process prison time
+    if (this.isInPrison()) {
+      this.crimeSystem.processPrisonTime(this.gameState.character, this.gameState.currentYear);
+      
+      // Check if character is released this year
+      const currentImprisonment = this.getCurrentImprisonment();
+      if (currentImprisonment && this.gameState.character.age >= currentImprisonment.endYear) {
+        this.addLifeEvent({
+          id: Date.now().toString(),
+          title: 'Released from Prison',
+          description: `You have been released from ${currentImprisonment.prison} after serving your sentence.`,
+          year: this.gameState.character.age,
+          impact: { happiness: 15, health: 5 }
+        });
+      }
+    }
+
     // Check for death
     const deathResult = this.checkForDeath();
     if (deathResult.isDead) {
       return { events: [], decisions: [], isDead: true, causeOfDeath: deathResult.cause };
     }
 
-    // Generate random events
+    // Generate random events (limited if in prison)
     const events = this.eventSystem.generateEventsForAge(this.gameState.character);
     events.forEach(event => this.addLifeEvent(event));
 
-    // Generate potential decisions
-    const decision = this.decisionSystem.generateDecisionForAge(this.gameState.character);
-    if (decision) {
-      // For now, we'll store the decision in the character's life events
-      // In a full implementation, you'd show this as a modal to the user
-      this.addLifeEvent({
-        id: Date.now().toString(),
-        title: 'Life Decision',
-        description: `You faced a decision: ${decision.title}`,
-        year: this.gameState.character.age,
-        impact: {}
-      });
+    // Generate potential decisions (limited if in prison)
+    if (!this.isInPrison()) {
+      const decision = this.decisionSystem.generateDecisionForAge(this.gameState.character);
+      if (decision) {
+        this.addLifeEvent({
+          id: Date.now().toString(),
+          title: 'Life Decision',
+          description: `You faced a decision: ${decision.title}`,
+          year: this.gameState.character.age,
+          impact: {}
+        });
+      }
     }
 
     // Update finances
@@ -292,6 +309,14 @@ export class GameEngine {
   enrollInEducation(educationType: string, field: string): any {
     const character = this.gameState.character;
 
+    // Check if in prison
+    if (this.isInPrison()) {
+      // Only allow basic education programs in prison
+      if (!['Primary School', 'High School', 'Trade School'].includes(educationType)) {
+        return { success: false, message: 'Advanced education not available while incarcerated' };
+      }
+    }
+
     const educationCosts = {
       'Primary School': 0,
       'High School': 0,
@@ -303,7 +328,10 @@ export class GameEngine {
 
     const cost = educationCosts[educationType as keyof typeof educationCosts] || 0;
 
-    if (character.bankAccount.balance < cost) {
+    // Education is free in prison
+    const actualCost = this.isInPrison() ? 0 : cost;
+
+    if (character.bankAccount.balance < actualCost) {
       return { success: false, message: 'Insufficient funds for education' };
     }
 
@@ -382,6 +410,16 @@ export class GameEngine {
       return { success: false, message: 'Too young for meaningful relationships' };
     }
 
+    // Check if in prison
+    if (this.isInPrison()) {
+      if (type === 'romantic') {
+        return { success: false, message: 'Romantic relationships are not allowed while incarcerated' };
+      }
+      if (type === 'friend' && Math.random() < 0.7) {
+        return { success: false, message: 'Limited social interaction while in prison' };
+      }
+    }
+
     const relationship = {
       id: Date.now().toString(),
       name: this.generateRandomName(),
@@ -415,6 +453,11 @@ export class GameEngine {
 
   buyProperty(propertyType: string): any {
     const character = this.gameState.character;
+
+    // Check if in prison
+    if (this.isInPrison()) {
+      return { success: false, message: 'Cannot purchase property while incarcerated' };
+    }
 
     const propertyPrices = {
       'Small Apartment': 150000,
@@ -647,6 +690,9 @@ export class GameEngine {
   }
 
   getCountry(id: string) {
+    if (!this.gameState.countries || !Array.isArray(this.gameState.countries)) {
+      return undefined;
+    }
     return this.gameState.countries.find(c => c.id === id);
   }
 
@@ -661,6 +707,33 @@ export class GameEngine {
 
   getDecisionSystem(): DecisionSystem {
     return this.decisionSystem;
+  }
+
+  isInPrison(): boolean {
+    return this.crimeSystem.isInPrison(this.gameState.character, this.gameState.character.age);
+  }
+
+  getCurrentImprisonment() {
+    return this.gameState.character.criminalRecord.imprisonments.find(imp => 
+      this.gameState.character.age >= imp.startYear && this.gameState.character.age < imp.endYear
+    );
+  }
+
+  getPrisonStatus(): { inPrison: boolean, prison?: string, yearsLeft?: number } {
+    if (!this.isInPrison()) {
+      return { inPrison: false };
+    }
+    
+    const imprisonment = this.getCurrentImprisonment();
+    if (imprisonment) {
+      return {
+        inPrison: true,
+        prison: imprisonment.prison,
+        yearsLeft: imprisonment.endYear - this.gameState.character.age
+      };
+    }
+    
+    return { inPrison: false };
   }
 
   commitCrime(crimeId: string): any {
@@ -686,6 +759,15 @@ export class GameEngine {
 
     if (this.gameState.character.age < 16) {
       return { success: false, message: 'You must be at least 16 years old to work' };
+    }
+
+    // Check if in prison
+    if (this.isInPrison()) {
+      // Only allow prison jobs
+      const prisonJobs = ['Kitchen Worker', 'Janitor', 'Laundry Worker', 'Library Assistant'];
+      if (!prisonJobs.includes(career.name)) {
+        return { success: false, message: 'Only prison jobs available while incarcerated' };
+      }
     }
 
     // Check education requirements
@@ -799,7 +881,16 @@ export class GameEngine {
     try {
       const saved = localStorage.getItem(this.saveKey);
       if (saved) {
-        this.gameState = JSON.parse(saved);
+        const saveData = JSON.parse(saved);
+        this.gameState = saveData.gameState;
+        
+        // Ensure countries and careers are properly restored
+        const safeCountries = Array.isArray(countries) ? countries : [];
+        const safeCareers = Array.isArray(careers) ? careers : [];
+        
+        this.gameState.countries = safeCountries;
+        this.gameState.careers = safeCareers;
+        
         return true;
       }
     } catch (error) {

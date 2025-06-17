@@ -1,164 +1,383 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Heart, 
+  Brain, 
+  Users, 
+  GraduationCap, 
+  Briefcase, 
+  Home,
+  Car,
+  Plane,
+  Gamepad2,
+  Dumbbell,
+  Book,
+  Music,
+  Camera,
+  Palette,
+  Coffee,
+  ShoppingBag,
+  Utensils,
+  Film,
+  MapPin,
+  Smartphone,
+  Headphones,
+  Shirt,
+  Gift,
+  Calendar,
+  Clock,
+  X,
+  AlertTriangle,
+  Skull,
+  PenTool,
+  Scale
+} from 'lucide-react';
 import { Character } from '../types/GameTypes';
-import { Briefcase, Zap, Skull, Heart, GraduationCap, Users, Home, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 interface LifeActionsInterfaceProps {
   character: Character;
-  onViewCareer: () => void;
-  onViewCrime: () => void;
-  onSuicide: () => void;
-  onBack: () => void;
+  gameEngine: any;
+  onClose: () => void;
 }
 
-interface ActionOption {
-  id: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  category: 'career' | 'crime' | 'health' | 'education' | 'relationships' | 'lifestyle' | 'danger';
-  minAge?: number;
-  onClick: () => void;
-  danger?: boolean;
+interface PrisonStatus {
+  inPrison: boolean;
+  prison?: string;
+  yearsLeft?: number;
 }
 
 export const LifeActionsInterface: React.FC<LifeActionsInterfaceProps> = ({
   character,
-  onViewCareer,
-  onViewCrime,
-  onSuicide,
-  onBack
+  gameEngine,
+  onClose
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showSuicideConfirm, setShowSuicideConfirm] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: '', message: '' });
 
-  const actions: ActionOption[] = [
-    // Career Actions
-    {
-      id: 'career',
-      icon: <Briefcase className="w-6 h-6" />,
-      title: 'Career Center',
-      description: 'Find a job, change careers, or advance your current position',
-      category: 'career',
-      minAge: 16,
-      onClick: onViewCareer
-    },
-    
-    // Crime Actions
-    {
-      id: 'crime',
-      icon: <Zap className="w-6 h-6" />,
-      title: 'Criminal Activities',
-      description: 'Commit crimes for quick money (high risk, high reward)',
-      category: 'crime',
-      minAge: 12,
-      onClick: onViewCrime,
-      danger: true
-    },
+  // Get prison status
+  const prisonStatus: PrisonStatus = gameEngine.getPrisonStatus();
 
-    // Health Actions
+  const handleAction = (message: string) => {
+    setModalContent({ title: 'Action Result', message });
+    setShowModal(true);
+  };
+
+  const handleSuicide = () => {
+    setModalContent({ title: 'Game Over', message: 'You have ended your life.' });
+    setShowModal(true);
+  };
+
+  const allActions = [
+    // Social Actions
     {
-      id: 'gym',
+      id: 'make-friends',
+      title: 'Make Friends',
+      description: 'Meet new people and build relationships',
+      category: 'social',
+      icon: <Users className="w-6 h-6" />,
+      onClick: () => handleAction('Made some new friends! Your social life is improving.')
+    },
+    {
+      id: 'go-on-date',
+      title: 'Go on a Date',
+      description: 'Find love and romance',
+      category: 'social',
       icon: <Heart className="w-6 h-6" />,
-      title: 'Go to Gym',
-      description: 'Work out to improve your health and looks',
-      category: 'health',
-      minAge: 12,
-      onClick: () => console.log('Gym action - to be implemented')
+      minAge: 16,
+      onClick: () => handleAction('Went on a date! Maybe this is the start of something special.')
+    },
+    {
+      id: 'spend-time-family',
+      title: 'Family Time',
+      description: 'Strengthen your bond with your family',
+      category: 'social',
+      icon: <Home className="w-6 h-6" />,
+      onClick: () => handleAction('Spent quality time with family. Your relationship is stronger.')
     },
 
     // Education Actions
     {
-      id: 'education',
-      icon: <GraduationCap className="w-6 h-6" />,
-      title: 'Education',
-      description: 'Attend school, college, or pursue higher education',
+      id: 'study',
+      title: 'Study',
+      description: 'Improve your knowledge and skills',
       category: 'education',
-      minAge: 6,
-      onClick: () => console.log('Education action - to be implemented')
+      icon: <Book className="w-6 h-6" />,
+      onClick: () => handleAction('Studied hard! Your intelligence has increased.')
     },
-
-    // Relationship Actions
     {
-      id: 'relationships',
-      icon: <Users className="w-6 h-6" />,
-      title: 'Relationships',
-      description: 'Meet new people, date, or strengthen existing relationships',
-      category: 'relationships',
-      minAge: 13,
-      onClick: () => console.log('Relationships action - to be implemented')
-    },
-
-    // Lifestyle Actions
-    {
-      id: 'real-estate',
-      icon: <Home className="w-6 h-6" />,
-      title: 'Real Estate',
-      description: 'Buy or sell property, manage your assets',
-      category: 'lifestyle',
+      id: 'attend-university',
+      title: 'Attend University',
+      description: 'Get a higher education degree',
+      category: 'education',
+      icon: <GraduationCap className="w-6 h-6" />,
       minAge: 18,
-      onClick: () => console.log('Real Estate action - to be implemented')
+      onClick: () => handleAction('Enrolled in university! Your future looks bright.')
+    },
+    {
+      id: 'learn-skill',
+      title: 'Learn a Skill',
+      description: 'Acquire a new skill or hobby',
+      category: 'education',
+      icon: <Brain className="w-6 h-6" />,
+      onClick: () => handleAction('Learned a new skill! Your versatility is improving.')
     },
 
-    // Danger Actions
+    // Career Actions
+    {
+      id: 'find-job',
+      title: 'Find a Job',
+      description: 'Search for employment opportunities',
+      category: 'career',
+      icon: <Briefcase className="w-6 h-6" />,
+      minAge: 16,
+      onClick: () => handleAction('Found a new job! Time to start earning.')
+    },
+    {
+      id: 'work-hard',
+      title: 'Work Hard',
+      description: 'Put in extra effort at your job',
+      category: 'career',
+      icon: <Dumbbell className="w-6 h-6" />,
+      minAge: 16,
+      onClick: () => handleAction('Worked extra hard! A promotion might be coming.')
+    },
+    {
+      id: 'start-business',
+      title: 'Start a Business',
+      description: 'Become an entrepreneur and run your own company',
+      category: 'career',
+      icon: <Briefcase className="w-6 h-6" />,
+      minAge: 22,
+      onClick: () => handleAction('Started a new business! The road to success begins.')
+    },
+
+    // Health Actions
+    {
+      id: 'exercise',
+      title: 'Exercise',
+      description: 'Improve your physical fitness',
+      category: 'health',
+      icon: <Dumbbell className="w-6 h-6" />,
+      onClick: () => handleAction('Exercised regularly! Your health is improving.')
+    },
+    {
+      id: 'meditate',
+      title: 'Meditate',
+      description: 'Relax your mind and reduce stress',
+      category: 'health',
+      icon: <Brain className="w-6 h-6" />,
+      onClick: () => handleAction('Meditated and relaxed. Your mental health is improving.')
+    },
+    {
+      id: 'doctor-visit',
+      title: 'Visit Doctor',
+      description: 'Get a medical checkup',
+      category: 'health',
+      icon: <Heart className="w-6 h-6" />,
+      onClick: () => handleAction('Visited the doctor. You are in good health!')
+    },
+
+    // Entertainment Actions
+    {
+      id: 'watch-movie',
+      title: 'Watch a Movie',
+      description: 'Enjoy a film at the cinema or at home',
+      category: 'entertainment',
+      icon: <Film className="w-6 h-6" />,
+      onClick: () => handleAction('Watched a great movie! Entertainment levels increased.')
+    },
+    {
+      id: 'play-games',
+      title: 'Play Games',
+      description: 'Have fun with video games or board games',
+      category: 'entertainment',
+      icon: <Gamepad2 className="w-6 h-6" />,
+      onClick: () => handleAction('Played some fun games! Happiness increased.')
+    },
+    {
+      id: 'listen-music',
+      title: 'Listen to Music',
+      description: 'Enjoy your favorite tunes',
+      category: 'entertainment',
+      icon: <Music className="w-6 h-6" />,
+      onClick: () => handleAction('Listened to music. Feeling relaxed and happy.')
+    },
+
+    // Shopping Actions
+    {
+      id: 'buy-clothes',
+      title: 'Buy Clothes',
+      description: 'Update your wardrobe with new outfits',
+      category: 'shopping',
+      icon: <Shirt className="w-6 h-6" />,
+      onClick: () => handleAction('Bought some new clothes! Looking stylish.')
+    },
+    {
+      id: 'buy-gadget',
+      title: 'Buy Gadget',
+      description: 'Purchase the latest technology',
+      category: 'shopping',
+      icon: <Smartphone className="w-6 h-6" />,
+      onClick: () => handleAction('Bought a new gadget! Tech levels increased.')
+    },
+    {
+      id: 'buy-gift',
+      title: 'Buy Gift',
+      description: 'Purchase a gift for someone special',
+      category: 'shopping',
+      icon: <Gift className="w-6 h-6" />,
+      onClick: () => handleAction('Bought a gift for someone. Relationship improved.')
+    },
+
+    // Travel Actions
+    {
+      id: 'go-vacation',
+      title: 'Go on Vacation',
+      description: 'Travel to a new destination',
+      category: 'travel',
+      icon: <Plane className="w-6 h-6" />,
+      minAge: 18,
+      onClick: () => handleAction('Went on vacation! Feeling refreshed.')
+    },
+    {
+      id: 'road-trip',
+      title: 'Road Trip',
+      description: 'Take a journey by car',
+      category: 'travel',
+      icon: <Car className="w-6 h-6" />,
+      minAge: 18,
+      onClick: () => handleAction('Took a road trip! New adventures await.')
+    },
+    {
+      id: 'explore-city',
+      title: 'Explore City',
+      description: 'Discover your city',
+      category: 'travel',
+      icon: <MapPin className="w-6 h-6" />,
+      onClick: () => handleAction('Explored the city. Discovered new places.')
+    },
+
+    // Dangerous Actions
     {
       id: 'suicide',
+      title: 'End It All',
+      description: 'Take your own life (irreversible)',
+      category: 'dangerous',
       icon: <Skull className="w-6 h-6" />,
-      title: 'End Life',
-      description: 'Give up on life and end the game permanently',
-      category: 'danger',
-      minAge: 10,
-      onClick: () => setShowSuicideConfirm(true),
-      danger: true
+      danger: true,
+      onClick: handleSuicide
+    },
+
+    // Prison-specific actions
+    {
+      id: 'prison-job',
+      title: 'Prison Work',
+      description: 'Take on a job within the prison system',
+      category: 'career',
+      icon: <Briefcase className="w-6 h-6" />,
+      onClick: () => handleAction('Prison work - limited options available while incarcerated')
+    },
+    {
+      id: 'prison-education',
+      title: 'Prison Education',
+      description: 'Attend educational programs in prison',
+      category: 'education',
+      icon: <GraduationCap className="w-6 h-6" />,
+      onClick: () => handleAction('Prison education programs - basic education available')
+    },
+    {
+      id: 'write-letters',
+      title: 'Write Letters',
+      description: 'Maintain contact with family and friends',
+      category: 'social',
+      icon: <PenTool className="w-6 h-6" />,
+      onClick: () => handleAction('Writing letters to maintain relationships outside')
+    },
+    {
+      id: 'appeals',
+      title: 'Legal Appeals',
+      description: 'Work on appealing your sentence',
+      category: 'legal',
+      icon: <Scale className="w-6 h-6" />,
+      onClick: () => handleAction('Working on legal appeals - to be implemented')
+    },
+    {
+      id: 'therapy',
+      title: 'Prison Therapy',
+      description: 'Attend rehabilitation programs',
+      category: 'health',
+      icon: <Heart className="w-6 h-6" />,
+      onClick: () => handleAction('Attending prison therapy and rehabilitation programs')
     }
   ];
 
   const categories = [
-    { id: 'all', label: 'All Actions', icon: null },
-    { id: 'career', label: 'Career', icon: <Briefcase className="w-4 h-4" /> },
-    { id: 'health', label: 'Health', icon: <Heart className="w-4 h-4" /> },
-    { id: 'education', label: 'Education', icon: <GraduationCap className="w-4 h-4" /> },
-    { id: 'relationships', label: 'Social', icon: <Users className="w-4 h-4" /> },
-    { id: 'lifestyle', label: 'Lifestyle', icon: <Home className="w-4 h-4" /> },
-    { id: 'crime', label: 'Crime', icon: <Zap className="w-4 h-4" /> },
-    { id: 'danger', label: 'Extreme', icon: <Skull className="w-4 h-4" /> }
+    { id: 'all', name: 'All Actions', icon: <Calendar className="w-4 h-4" /> },
+    { id: 'social', name: 'Social', icon: <Users className="w-4 h-4" /> },
+    { id: 'education', name: 'Education', icon: <GraduationCap className="w-4 h-4" /> },
+    { id: 'career', name: 'Career', icon: <Briefcase className="w-4 h-4" /> },
+    { id: 'health', name: 'Health', icon: <Heart className="w-4 h-4" /> },
+    { id: 'entertainment', name: 'Fun', icon: <Gamepad2 className="w-4 h-4" /> },
+    { id: 'shopping', name: 'Shopping', icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: 'travel', name: 'Travel', icon: <Plane className="w-4 h-4" /> },
+    { id: 'legal', name: 'Legal', icon: <Scale className="w-4 h-4" /> },
+    { id: 'dangerous', name: 'Risky', icon: <AlertTriangle className="w-4 h-4" /> }
   ];
 
-  const filteredActions = selectedCategory === 'all' 
-    ? actions 
-    : actions.filter(action => action.category === selectedCategory);
+  const availableActions = useMemo(() => {
+    return allActions.filter(action => {
+      // Age restrictions
+      if (action.minAge && character.age < action.minAge) return false;
+      if (action.maxAge && character.age > action.maxAge) return false;
 
-  const availableActions = filteredActions.filter(action => 
-    !action.minAge || character.age >= action.minAge
-  );
+      // Category filter
+      if (selectedCategory !== 'all' && action.category !== selectedCategory) return false;
 
-  const handleSuicideConfirm = () => {
-    setShowSuicideConfirm(false);
-    onSuicide();
-  };
+      // Prison restrictions
+      if (prisonStatus.inPrison) {
+        const allowedInPrison = [
+          'exercise', 'read', 'meditate', 'prison-job', 'prison-education',
+          'write-letters', 'appeals', 'therapy', 'suicide'
+        ];
+        if (!allowedInPrison.includes(action.id)) return false;
+      }
+
+      return true;
+    });
+  }, [character.age, selectedCategory, prisonStatus.inPrison]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={onBack}
-                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Life Actions</h1>
-                <p className="text-white/70 mt-1">Choose what to do with your life</p>
+            <h1 className="text-2xl font-bold text-white">Life Actions</h1>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
+
+          {/* Prison Status */}
+          {prisonStatus.inPrison && (
+            <div className="mt-4 bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                <div>
+                  <h3 className="text-red-300 font-bold">Currently Incarcerated</h3>
+                  <p className="text-red-200 text-sm">
+                    Imprisoned at {prisonStatus.prison} - {prisonStatus.yearsLeft} years remaining
+                  </p>
+                  <p className="text-red-200/80 text-xs mt-1">
+                    Your actions are limited while in prison. Focus on rehabilitation and personal growth.
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-white font-bold">Age {character.age}</div>
-              <div className="text-white/70 text-sm">{character.name}</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -176,7 +395,7 @@ export const LifeActionsInterface: React.FC<LifeActionsInterfaceProps> = ({
               }`}
             >
               {category.icon}
-              {category.label}
+              {category.name}
             </button>
           ))}
         </div>
@@ -200,7 +419,7 @@ export const LifeActionsInterface: React.FC<LifeActionsInterfaceProps> = ({
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                 </div>
               )}
-              
+
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
                 action.danger 
                   ? 'bg-red-500/20 text-red-400' 
@@ -208,10 +427,10 @@ export const LifeActionsInterface: React.FC<LifeActionsInterfaceProps> = ({
               }`}>
                 {action.icon}
               </div>
-              
+
               <h3 className="text-lg font-bold text-white mb-2">{action.title}</h3>
               <p className="text-white/70 text-sm">{action.description}</p>
-              
+
               {action.minAge && character.age < action.minAge && (
                 <div className="mt-3 text-yellow-400 text-xs">
                   Available at age {action.minAge}
@@ -229,32 +448,18 @@ export const LifeActionsInterface: React.FC<LifeActionsInterfaceProps> = ({
         )}
       </div>
 
-      {/* Suicide Confirmation Modal */}
-      {showSuicideConfirm && (
+      {/* Modal */}
+      {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full border border-red-500/30">
-            <div className="text-center">
-              <Skull className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">End Your Life?</h2>
-              <p className="text-white/70 mb-6">
-                This action is permanent and will end your game. Are you absolutely sure you want to do this?
-              </p>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowSuicideConfirm(false)}
-                  className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSuicideConfirm}
-                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
-                >
-                  End Game
-                </button>
-              </div>
-            </div>
+          <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full border border-white/10">
+            <h2 className="text-xl font-bold text-white mb-4">{modalContent.title}</h2>
+            <p className="text-white/70 mb-6">{modalContent.message}</p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full py-3 px-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

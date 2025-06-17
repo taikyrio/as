@@ -129,9 +129,9 @@ export class CrimeSystem {
   }
 
   // Check if character is currently in prison
-  isInPrison(character: Character, currentYear: number): boolean {
+  isInPrison(character: Character, currentAge: number): boolean {
     return character.criminalRecord.imprisonments.some(imp => 
-      currentYear >= imp.startYear && currentYear < imp.endYear
+      currentAge >= imp.startYear && currentAge < imp.endYear
     );
   }
 

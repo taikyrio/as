@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
@@ -20,6 +21,13 @@ import {
   Briefcase,
   GraduationCap,
   Zap,
+  Lock,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 import { Character, LifeEvent } from '../types/GameTypes';
 import { TimelineInterface } from './TimelineInterface';
@@ -37,6 +45,7 @@ interface MobileGameInterfaceProps {
   onViewCareer: () => void;
   onViewCrime: () => void;
   onViewLifeActions: () => void;
+  prisonStatus: { inPrison: boolean, prison?: string, yearsLeft?: number };
 }
 
 export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
@@ -48,10 +57,11 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
   onShowStats,
   onViewCareer,
   onViewCrime,
-  onViewLifeActions
+  onViewLifeActions,
+  prisonStatus
 }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'timeline' | 'actions' | 'activities' | 'minigames'>('overview');
-  const [showMenu, setShowMenu] = useState(false);
+  const [activeView, setActiveView] = useState<'overview' | 'timeline' | 'actions' | 'activities'>('overview');
+  const [selectedAge, setSelectedAge] = useState(character.age);
   const [currentDecision, setCurrentDecision] = useState<any>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
 
@@ -64,228 +74,387 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
   }, [onSaveGame]);
 
   const getLifeStage = (age: number) => {
-    if (age <= 5) return { stage: 'Early Childhood', emoji: '👶', color: 'from-pink-400 to-pink-600' };
-    if (age <= 12) return { stage: 'Childhood', emoji: '🧒', color: 'from-blue-400 to-blue-600' };
-    if (age <= 17) return { stage: 'Adolescence', emoji: '👦', color: 'from-purple-400 to-purple-600' };
-    if (age <= 25) return { stage: 'Young Adult', emoji: '👨', color: 'from-green-400 to-green-600' };
-    if (age <= 40) return { stage: 'Adult', emoji: '👨‍💼', color: 'from-orange-400 to-orange-600' };
-    if (age <= 65) return { stage: 'Middle Age', emoji: '👨‍🦳', color: 'from-yellow-400 to-yellow-600' };
-    return { stage: 'Elder', emoji: '👴', color: 'from-gray-400 to-gray-600' };
+    if (age <= 5) return { stage: 'Early Childhood', emoji: '👶', color: 'bg-pink-500' };
+    if (age <= 12) return { stage: 'Childhood', emoji: '🧒', color: 'bg-blue-500' };
+    if (age <= 17) return { stage: 'Adolescence', emoji: '👦', color: 'bg-purple-500' };
+    if (age <= 25) return { stage: 'Young Adult', emoji: '👨', color: 'bg-green-500' };
+    if (age <= 40) return { stage: 'Adult', emoji: '👨‍💼', color: 'bg-orange-500' };
+    if (age <= 65) return { stage: 'Middle Age', emoji: '👨‍🦳', color: 'bg-yellow-500' };
+    return { stage: 'Elder', emoji: '👴', color: 'bg-gray-500' };
   };
 
   const lifeStage = getLifeStage(character.age);
-  const recentEvents = character.lifeEvents.slice(0, 3);
 
-  const StatCard = ({ icon, label, value, max = 100, color }: any) => (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-white/80 text-sm font-medium">{label}</span>
-        </div>
-        <span className="text-white font-bold">{value}</span>
-      </div>
-      <div className="w-full bg-white/20 rounded-full h-2">
+  // Group events by age for detailed logging
+  const eventsByAge = character.lifeEvents.reduce((acc, event) => {
+    const age = event.year;
+    if (!acc[age]) acc[age] = [];
+    acc[age].push(event);
+    return acc;
+  }, {} as Record<number, LifeEvent[]>);
+
+  // Get events for selected age
+  const selectedAgeEvents = eventsByAge[selectedAge] || [];
+
+  // Create comprehensive life log including basic milestones
+  const createLifeLog = (age: number): LifeEvent[] => {
+    const events = eventsByAge[age] || [];
+    const baseMilestones: LifeEvent[] = [];
+
+    // Add automatic milestones
+    if (age === 0) {
+      baseMilestones.push({
+        id: `birth-${age}`,
+        title: 'Born',
+        description: `You were born as ${character.name} in ${character.location}. Welcome to the world!`,
+        year: age,
+        impact: {}
+      });
+    }
+
+    if (age === 1 && !events.some(e => e.title.includes('First Steps'))) {
+      baseMilestones.push({
+        id: `milestone-walk-${age}`,
+        title: 'Learning to Walk',
+        description: 'You are starting to take your first wobbly steps around the house.',
+        year: age,
+        impact: {}
+      });
+    }
+
+    if (age === 2 && !events.some(e => e.title.includes('Talking'))) {
+      baseMilestones.push({
+        id: `milestone-talk-${age}`,
+        title: 'Learning to Talk',
+        description: 'You are beginning to form simple words and communicate with your family.',
+        year: age,
+        impact: {}
+      });
+    }
+
+    if (age === 5 && !events.some(e => e.title.includes('School'))) {
+      baseMilestones.push({
+        id: `milestone-school-${age}`,
+        title: 'Starting School',
+        description: 'You began attending elementary school, making new friends and learning basic skills.',
+        year: age,
+        impact: { intelligence: 5, happiness: 10 }
+      });
+    }
+
+    if (age === 13) {
+      baseMilestones.push({
+        id: `milestone-teen-${age}`,
+        title: 'Becoming a Teenager',
+        description: 'You officially became a teenager! Your body and mind are going through many changes.',
+        year: age,
+        impact: { looks: 5 }
+      });
+    }
+
+    if (age === 18) {
+      baseMilestones.push({
+        id: `milestone-adult-${age}`,
+        title: 'Reached Adulthood',
+        description: 'You are now legally an adult with new freedoms and responsibilities.',
+        year: age,
+        impact: { happiness: 15 }
+      });
+    }
+
+    // Combine and sort all events
+    return [...baseMilestones, ...events].sort((a, b) => {
+      // Sort by event type priority, then by id
+      const priority = (event: LifeEvent) => {
+        if (event.title === 'Born') return 0;
+        if (event.title.includes('Learning')) return 1;
+        if (event.title.includes('School')) return 2;
+        if (event.title.includes('Achievement')) return 3;
+        return 4;
+      };
+      return priority(a) - priority(b);
+    });
+  };
+
+  const selectedAgeLog = createLifeLog(selectedAge);
+
+  const StatBar = ({ label, value, statType, max = 100 }: { 
+    label: string; 
+    value: number; 
+    statType: 'health' | 'happiness' | 'intelligence' | 'looks' | 'fitness';
+    max?: number;
+  }) => (
+    <div className="stat-bar-container">
+      <span className="stat-bar-label">{label}:</span>
+      <div className="stat-bar-track">
         <div 
-          className={`h-2 rounded-full bg-gradient-to-r ${color}`}
+          className={`stat-bar-fill stat-${statType}`}
           style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%` }}
         ></div>
       </div>
+      <span className="stat-bar-value">{value}</span>
     </div>
   );
 
-  const ActionButton = ({ icon, text, onClick, color = 'from-purple-500 to-blue-500' }: any) => (
+  const BottomNavButton = ({ icon, label, active, onClick, isDisabled = false }: any) => (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r ${color} text-white font-semibold rounded-xl hover:scale-105 transition-all duration-300 shadow-lg`}
+      disabled={isDisabled}
+      className={`bottom-nav-btn ${active ? 'active' : ''} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      {icon}
-      <span>{text}</span>
+      <div className="bottom-nav-icon">
+        {icon}
+      </div>
+      <span className="bottom-nav-label">{label}</span>
     </button>
+  );
+
+  const EventLogItem = ({ event, showAge = false }: { event: LifeEvent; showAge?: boolean }) => (
+    <div className="event-log animate-fade-in">
+      <div className="event-log-header">
+        <h4 className="event-log-title">{event.title}</h4>
+        {showAge && <span className="event-log-age">Age {event.year}</span>}
+      </div>
+      <p className="event-log-description">{event.description}</p>
+      {event.impact && Object.keys(event.impact).length > 0 && (
+        <div className="event-impact-tags">
+          {Object.entries(event.impact).map(([stat, value]) => (
+            <span
+              key={stat}
+              className={`impact-tag ${(value || 0) > 0 ? 'impact-positive' : 'impact-negative'}`}
+            >
+              {stat.charAt(0).toUpperCase() + stat.slice(1)} {(value || 0) > 0 ? '+' : ''}{value}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   if (activeView === 'timeline') {
     return (
-      <TimelineInterface
-        character={character}
-        currentYear={currentYear}
-        onAgeUp={onAgeUp}
-        onViewEvent={(event) => {
-          // Handle event viewing
-        }}
-      />
+      <div className="lifesim-container">
+        {/* Header */}
+        <div className="bg-gray-800/90 backdrop-blur-md border-b border-gray-700 sticky top-0 z-10 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setActiveView('overview')}
+              className="lifesim-btn btn-secondary"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+            <h1 className="text-lg font-bold text-white">Life Timeline</h1>
+            <div className="w-16"></div>
+          </div>
+        </div>
+
+        <div className="p-4 pb-24">
+          {/* Age Navigator */}
+          <div className="age-navigator">
+            <button
+              onClick={() => setSelectedAge(Math.max(0, selectedAge - 1))}
+              disabled={selectedAge <= 0}
+              className="lifesim-btn btn-secondary"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            
+            <div className="flex-1 text-center">
+              <div className="text-2xl font-bold text-white">Age {selectedAge}</div>
+              <div className="text-sm text-gray-400">{getLifeStage(selectedAge).stage}</div>
+            </div>
+            
+            <button
+              onClick={() => setSelectedAge(Math.min(character.age, selectedAge + 1))}
+              disabled={selectedAge >= character.age}
+              className="lifesim-btn btn-secondary"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Age Slider */}
+          <div className="mb-6">
+            <input
+              type="range"
+              min="0"
+              max={character.age}
+              value={selectedAge}
+              onChange={(e) => setSelectedAge(parseInt(e.target.value))}
+              className="age-slider w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-2">
+              <span>Birth</span>
+              <span>Age {character.age}</span>
+            </div>
+          </div>
+
+          {/* Events for Selected Age */}
+          <div className="lifesim-section">
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Life Log - Age {selectedAge}
+            </h3>
+            
+            {selectedAgeLog.length > 0 ? (
+              <div className="space-y-3">
+                {selectedAgeLog.map((event, index) => (
+                  <EventLogItem key={`${event.id}-${index}`} event={event} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-400">No events recorded for this age</p>
+                <p className="text-gray-500 text-sm">Life was quiet and peaceful</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="bottom-nav">
+          <div className="bottom-nav-container">
+            <BottomNavButton
+              icon={<Briefcase className="w-4 h-4" />}
+              label="Career"
+              active={false}
+              onClick={onViewCareer}
+            />
+            <BottomNavButton
+              icon={<Heart className="w-4 h-4" />}
+              label="Relationships"
+              active={false}
+              onClick={onViewLifeActions}
+            />
+            <BottomNavButton
+              icon={<User className="w-4 h-4" />}
+              label="Profile"
+              active={false}
+              onClick={() => setActiveView('overview')}
+            />
+            <BottomNavButton
+              icon={<BookOpen className="w-4 h-4" />}
+              label="Timeline"
+              active={true}
+              onClick={() => setActiveView('timeline')}
+            />
+            <BottomNavButton
+              icon={<Activity className="w-4 h-4" />}
+              label="Activities"
+              active={false}
+              onClick={() => setActiveView('activities')}
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-      {/* Mobile Header */}
-      <div className="bg-black/30 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">{lifeStage.emoji}</div>
-              <div>
-                <h1 className="text-xl font-bold text-white">{character.name}</h1>
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <span>Age {character.age}</span>
-                  <span>{currentYear}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs bg-gradient-to-r ${lifeStage.color} text-white`}>
-                    {lifeStage.stage}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onSaveGame}
-                className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-              >
-                <Save className="w-5 h-5 text-white" />
-              </button>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-              >
-                {showMenu ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
-              </button>
-            </div>
+    <div className="lifesim-container">
+      {/* Top Bar */}
+      <div className="bg-gray-800/90 backdrop-blur-md px-4 py-3 border-b border-gray-700">
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-green-400" />
+            <span className="text-lg font-bold text-white">
+              ${character.bankAccount.balance.toLocaleString()}
+            </span>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {showMenu && (
-          <div className="bg-black/40 backdrop-blur-md border-t border-white/10 px-4 py-4">
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => { setActiveView('overview'); setShowMenu(false); }}
-                className={`p-3 rounded-lg font-medium transition-all ${
-                  activeView === 'overview' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => { setActiveView('timeline'); setShowMenu(false); }}
-                className={`p-3 rounded-lg font-medium transition-all ${
-                  activeView === 'timeline' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70'
-                }`}
-              >
-                Timeline
-              </button>
-              <button
-                onClick={() => { setActiveView('actions'); setShowMenu(false); }}
-                className={`p-3 rounded-lg font-medium transition-all ${
-                  activeView === 'actions' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70'
-                }`}
-              >
-                Actions
-              </button>
-              <button
-                onClick={() => { onShowStats(); setShowMenu(false); }}
-                className="p-3 rounded-lg font-medium bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-all"
-              >
-                Statistics
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-4 py-6 pb-24">
         {activeView === 'overview' && (
           <>
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <StatCard 
-                icon={<Heart className="w-4 h-4 text-red-400" />}
-                label="Health"
-                value={character.stats.health}
-                color="from-red-500 to-red-400"
-              />
-              <StatCard 
-                icon={<Brain className="w-4 h-4 text-blue-400" />}
-                label="Intelligence"
-                value={character.stats.intelligence}
-                color="from-blue-500 to-blue-400"
-              />
-              <StatCard 
-                icon={<Eye className="w-4 h-4 text-pink-400" />}
-                label="Looks"
-                value={character.stats.looks}
-                color="from-pink-500 to-pink-400"
-              />
-              <StatCard 
-                icon={<Smile className="w-4 h-4 text-yellow-400" />}
-                label="Happiness"
-                value={character.stats.happiness}
-                color="from-yellow-500 to-yellow-400"
-              />
-            </div>
-
-            {/* Financial Status */}
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-400" />
-                  Financial Status
-                </h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-white/70">Net Worth</span>
-                  <span className="text-green-400 font-bold">
-                    ${character.bankAccount.balance.toLocaleString()}
-                  </span>
-                </div>
-                {character.career && (
-                  <div className="flex justify-between">
-                    <span className="text-white/70">Monthly Salary</span>
-                    <span className="text-white">
-                      ${Math.floor(character.career.salary / 12).toLocaleString()}
-                    </span>
+            {/* Character Info */}
+            <div className="lifesim-section mb-4">
+              <div className="text-center">
+                <div className="text-4xl mb-2">{lifeStage.emoji}</div>
+                <h2 className="text-xl font-bold text-white">{character.name}</h2>
+                <p className="text-gray-400">Age {character.age} • {lifeStage.stage}</p>
+                {prisonStatus?.inPrison && (
+                  <div className="mt-2 px-3 py-1 bg-red-900/50 border border-red-700 rounded-lg inline-block">
+                    <div className="flex items-center gap-2 text-red-300 text-sm">
+                      <Lock className="w-4 h-4" />
+                      Incarcerated - {prisonStatus.yearsLeft} years left
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Stats Section */}
+            <div className="lifesim-section mb-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Character Stats</h3>
+              <StatBar label="Health" value={character.stats.health} statType="health" />
+              <StatBar label="Happiness" value={character.stats.happiness} statType="happiness" />
+              <StatBar label="Intelligence" value={character.stats.intelligence} statType="intelligence" />
+              <StatBar label="Looks" value={character.stats.looks} statType="looks" />
+              <StatBar label="Fitness" value={character.stats.health} statType="fitness" />
+            </div>
+
             {/* Recent Events */}
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Recent Events
-              </h3>
-              <div className="space-y-3">
-                {recentEvents.length > 0 ? (
-                  recentEvents.map((event, index) => (
-                    <div key={`${event.id}-${Date.now()}-${index}`} className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-white text-sm">{event.title}</h4>
-                          <p className="text-white/70 text-xs mt-1">{event.description}</p>
-                          <span className="text-white/50 text-xs">Age {event.year}</span>
-                        </div>
-                        <Star className="w-4 h-4 text-yellow-400 ml-2" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-white/60 text-center py-4">No recent events</p>
-                )}
+            <div className="lifesim-section mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Recent Events
+                </h3>
+                <button
+                  onClick={() => setActiveView('timeline')}
+                  className="lifesim-btn btn-secondary text-sm"
+                >
+                  View All
+                </button>
               </div>
+              
+              {character.lifeEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {character.lifeEvents.slice(-5).reverse().map((event, index) => (
+                    <EventLogItem key={`recent-${event.id}-${index}`} event={event} showAge={true} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-center py-4">
+                    <h4 className="text-yellow-400 font-semibold text-lg mb-2">
+                      Age {character.age} - Just Born!
+                    </h4>
+                    <p className="text-gray-300 text-sm mb-2">
+                      My name is {character.name}
+                    </p>
+                    <p className="text-gray-300 text-sm mb-2">
+                      I was born {character.gender || 'male'} in {character.location} in {currentYear}
+                    </p>
+                    {character.parents && (
+                      <>
+                        <p className="text-gray-300 text-sm mb-1">
+                          My father is {character.parents.father}, he works as a {character.parents.fatherJob || 'unknown profession'}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          My mother is {character.parents.mother}, she works as a {character.parents.motherJob || 'unknown profession'}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Age Up Button */}
-            <div className="sticky bottom-4">
-              <button
-                onClick={onAgeUp}
-                className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-lg rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg"
-              >
-                <Clock className="w-6 h-6" />
-                Age Up to {character.age + 1}
-              </button>
-            </div>
+            <button
+              onClick={onAgeUp}
+              className={`lifesim-btn btn-success w-full py-4 text-lg font-bold ${
+                prisonStatus?.inPrison ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={prisonStatus?.inPrison}
+            >
+              <Calendar className="w-6 h-6" />
+              {prisonStatus?.inPrison ? `Serve Time (${prisonStatus.yearsLeft} years left)` : 'Age Up'}
+            </button>
           </>
         )}
 
@@ -293,59 +462,112 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-white mb-6">Life Actions</h2>
 
-            <ActionButton
-              icon={<GraduationCap className="w-6 h-6" />}
-              text="Education & Learning"
-              onClick={() => {}}
-              color="from-blue-500 to-cyan-500"
-            />
-
-            <ActionButton
-              icon={<Briefcase className="w-6 h-6" />}
-              text="Career & Work"
-              onClick={onViewCareer}
-              color="from-green-500 to-emerald-500"
-            />
-
-            <ActionButton
-              icon={<Users className="w-6 h-6" />}
-              text="Relationships"
-              onClick={() => {}}
-              color="from-pink-500 to-rose-500"
-            />
-
-            <ActionButton
-              icon={<Home className="w-6 h-6" />}
-              text="Real Estate"
-              onClick={() => {}}
-              color="from-orange-500 to-amber-500"
-            />
-
-            <ActionButton
-              icon={<Heart className="w-6 h-6" />}
-              text="Health & Fitness"
-              onClick={() => {}}
-              color="from-red-500 to-pink-500"
-            />
-
-            <ActionButton
-              icon={<Star className="w-6 h-6" />}
-              text="All Life Actions"
+            <button
               onClick={onViewLifeActions}
-              color="from-purple-500 to-indigo-500"
-            />
+              className="lifesim-card w-full p-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <GraduationCap className="w-6 h-6 text-blue-400" />
+                <span className="text-white font-medium">Education & Learning</span>
+              </div>
+            </button>
+
+            <button
+              onClick={onViewCareer}
+              className="lifesim-card w-full p-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-6 h-6 text-green-400" />
+                <span className="text-white font-medium">Career & Work</span>
+              </div>
+            </button>
+
+            <button
+              onClick={onViewLifeActions}
+              className="lifesim-card w-full p-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-pink-400" />
+                <span className="text-white font-medium">Relationships</span>
+              </div>
+            </button>
+
+            <button
+              onClick={onViewLifeActions}
+              className="lifesim-card w-full p-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Home className="w-6 h-6 text-orange-400" />
+                <span className="text-white font-medium">Real Estate</span>
+              </div>
+            </button>
+
+            <button
+              onClick={onViewLifeActions}
+              className="lifesim-card w-full p-4 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Heart className="w-6 h-6 text-red-400" />
+                <span className="text-white font-medium">Health & Fitness</span>
+              </div>
+            </button>
 
             {character.age >= 12 && (
-              <ActionButton
-                icon={<div className="w-6 h-6 flex items-center justify-center text-red-400 font-bold">⚡</div>}
-                text="Criminal Activities"
+              <button
                 onClick={onViewCrime}
-                color="from-red-500 to-red-600"
-                danger={true}
-              />
+                className="lifesim-card w-full p-4 text-left border border-red-700/50"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="w-6 h-6 text-red-400" />
+                  <span className="text-red-400 font-medium">Criminal Activities</span>
+                </div>
+              </button>
             )}
           </div>
         )}
+
+        {activeView === 'activities' && (
+          <ActivitiesInterface
+            character={character}
+            onBack={() => setActiveView('overview')}
+          />
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="bottom-nav">
+        <div className="bottom-nav-container">
+          <BottomNavButton
+            icon={<Briefcase className="w-4 h-4" />}
+            label="Career"
+            active={false}
+            onClick={onViewCareer}
+          />
+          <BottomNavButton
+            icon={<Heart className="w-4 h-4" />}
+            label="Relationships"
+            active={false}
+            onClick={onViewLifeActions}
+          />
+          <BottomNavButton
+            icon={<User className="w-4 h-4" />}
+            label="Profile"
+            active={activeView === 'overview'}
+            onClick={() => setActiveView('overview')}
+          />
+          <BottomNavButton
+            icon={<BookOpen className="w-4 h-4" />}
+            label="Timeline"
+            active={activeView === 'timeline'}
+            onClick={() => setActiveView('timeline')}
+          />
+          <BottomNavButton
+            icon={<Activity className="w-4 h-4" />}
+            label="Activities"
+            active={activeView === 'activities'}
+            onClick={() => setActiveView('activities')}
+          />
+        </div>
       </div>
 
       {/* Decision Modal */}
@@ -353,7 +575,6 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
         <DecisionModal
           decision={currentDecision}
           onChoose={(optionId) => {
-            // Handle decision
             setCurrentDecision(null);
           }}
           onClose={() => setCurrentDecision(null)}
@@ -374,42 +595,5 @@ export const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({
         </div>
       )}
     </div>
-  );
-};
-
-// ActionButton Component
-interface ActionButtonProps {
-  icon: React.ReactNode;
-  text: string;
-  onClick: () => void;
-  color: string;
-  danger?: boolean;
-}
-
-const ActionButton: React.FC<ActionButtonProps> = ({ 
-  icon, 
-  text, 
-  onClick, 
-  color, 
-  danger = false 
-}) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full p-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-4 shadow-lg ${
-        danger 
-          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-400/30' 
-          : `bg-gradient-to-r ${color} text-white`
-      }`}
-    >
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-        danger ? 'bg-red-400/20' : 'bg-white/20'
-      }`}>
-        {icon}
-      </div>
-      <div className="flex-1 text-left">
-        <div className="font-bold">{text}</div>
-      </div>
-    </button>
   );
 };

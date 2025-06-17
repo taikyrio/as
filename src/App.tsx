@@ -186,8 +186,8 @@ function App() {
             onNewGame={handleNewGame}
             onQuickStart={handleQuickStart}
             onLoadGame={handleLoadGame}
-            onShowSettings={handleShowSettings}
-            onShowStats={handleShowStats}
+            onSettings={handleShowSettings}
+            onStats={handleShowStats}
             hasExistingSave={hasExistingSave}
           />
         );
@@ -202,6 +202,11 @@ function App() {
         );
 
       case 'game':
+        if (!gameState.character) {
+          // If no character exists, redirect to character creation
+          setCurrentScreen('character-creation');
+          return null;
+        }
         return (
           <MobileGameInterface
             character={gameState.character}
@@ -213,10 +218,15 @@ function App() {
             onViewCareer={handleViewCareer}
             onViewCrime={handleViewCrime}
             onViewLifeActions={handleViewLifeActions}
+            prisonStatus={gameEngine.getPrisonStatus()}
           />
         );
 
       case 'crime':
+        if (!gameState.character) {
+          setCurrentScreen('character-creation');
+          return null;
+        }
         return (
           <CrimeInterface
             character={gameState.character}
@@ -226,6 +236,10 @@ function App() {
         );
 
       case 'career':
+        if (!gameState.character) {
+          setCurrentScreen('character-creation');
+          return null;
+        }
         return (
           <CareerInterface
             character={gameState.character}
@@ -236,6 +250,10 @@ function App() {
         );
 
       case 'life-actions':
+        if (!gameState.character) {
+          setCurrentScreen('character-creation');
+          return null;
+        }
         return (
           <LifeActionsInterface
             character={gameState.character}
@@ -261,7 +279,7 @@ function App() {
         />
       )}
 
-      {showStats && (
+      {showStats && gameState.character && (
         <Statistics
           character={gameState.character}
           onClose={() => setShowStats(false)}

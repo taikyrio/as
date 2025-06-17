@@ -37,7 +37,7 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
   onViewCareer
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   const country = countries.find(c => c.id === character.location);
   const recentEvents = character.lifeEvents.slice(0, 5);
 
@@ -83,7 +83,7 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-2xl font-bold text-green-400">
@@ -102,6 +102,26 @@ export const GameInterface: React.FC<GameInterfaceProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Prison Status Banner */}
+      {character.criminalRecord.imprisonments.some(imp => 
+        character.age >= imp.startYear && character.age < imp.endYear
+      ) && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg px-4 py-2 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-red-300 font-semibold">INCARCERATED</span>
+            {character.criminalRecord.imprisonments
+              .filter(imp => character.age >= imp.startYear && character.age < imp.endYear)
+              .map(imp => (
+                <span key={imp.id} className="text-red-200 text-sm">
+                  - {imp.prison} ({imp.endYear - character.age} years remaining)
+                </span>
+              ))
+            }
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
